@@ -1,0 +1,32 @@
+.protected-route-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom right, #0f172a, #4c1d95, #0f172a);
+}
+
+.protected-route-loading-content {
+  text-align: center;
+}
+
+.protected-route-spinner {
+  height: 3rem;
+  width: 3rem;
+  color: #6366f1;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+.protected-route-loading-text {
+  color: #d1d5db;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

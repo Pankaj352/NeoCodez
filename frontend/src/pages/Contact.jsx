@@ -44,9 +44,9 @@ export default function Contact() {
   };
 
   const contactInfo = [
-    { icon: Mail, title: "Email", value: "hello@NeoCodez.dev", link: "mailto:hello@NeoCodez.dev" },
-    { icon: Phone, title: "Phone", value: "+1 (555) 123-4567", link: "tel:+15551234567" },
-    { icon: MapPin, title: "Location", value: "San Francisco, CA", link: "#" }
+    { icon: Mail, title: "Email", value: "contact@neocodez.com", link: "mailto:contact@neocodez.com" },
+    { icon: Phone, title: "Phone", value: "+91 7081051605", link: "tel:+15551234567" },
+    { icon: MapPin, title: "Location", value: "Balrampur, Uttar Pradesh (India)", link: "#" }
   ];
 
   const socialLinks = [

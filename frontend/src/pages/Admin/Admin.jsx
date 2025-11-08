@@ -37,6 +37,8 @@ export default function Admin() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState(''); // 'project', 'blog', 'contact'
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
   
   const { loading, error, execute } = useApi();
   const { user, logout } = useAuth();
@@ -63,8 +65,9 @@ export default function Admin() {
     }
   };
 
-  const handleDelete = async (type, id) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    const { type, id } = itemToDelete;
     
     try {
       switch (type) {
@@ -84,6 +87,13 @@ export default function Admin() {
     } catch (error) {
       console.error('Failed to delete item:', error);
     }
+    setItemToDelete(null);
+    setIsConfirmModalOpen(false);
+  };
+
+  const handleDelete = (type, id) => {
+    setItemToDelete({ type, id });
+    setIsConfirmModalOpen(true);
   };
 
   const openModal = (type, item = null) => {
@@ -207,6 +217,14 @@ export default function Admin() {
           onSave={fetchData}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this item? This action cannot be undone."
+      />
     </motion.div>
   );
 }
@@ -688,6 +706,42 @@ function SettingsTab() {
           </div>
         </motion.div>
       </div>
+    </div>
+  );
+}
+
+// Confirmation Modal Component
+function ConfirmationModal({ isOpen, onClose, onConfirm, title, message }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-background p-6 rounded-lg shadow-lg w-full max-w-sm"
+      >
+        <h2 className="text-lg font-bold mb-4">{title}</h2>
+        <p className="text-text-secondary mb-6">{message}</p>
+        <div className="flex justify-end space-x-4">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onClose}
+            className="btn-ghost"
+          >
+            Cancel
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onConfirm}
+            className="btn-danger"
+          >
+            Confirm
+          </motion.button>
+        </div>
+      </motion.div>
     </div>
   );
 }

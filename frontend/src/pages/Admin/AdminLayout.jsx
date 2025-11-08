@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useOutlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -13,7 +13,7 @@ import AdminHeader from './AdminHeader';
 import '../../styles/AdminSidebar.css';
 import ThreeDBackground from '../../components/ThreeDBackground';
 
-export default function AdminLayout() {
+export default function AdminLayout({ projects, blogPosts, contacts, handleDelete, openModal }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
@@ -61,7 +61,7 @@ export default function AdminLayout() {
       <div className="admin-main">
         <AdminHeader toggleSidebar={toggleSidebar} />
         <div className="admin-content-wrapper">
-          <Outlet />
+          {outlet && React.cloneElement(outlet, { projects, blogPosts, contacts, handleDelete, openModal })}
         </div>
       </div>
     </div>

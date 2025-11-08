@@ -10,7 +10,7 @@ const experiences = [
     title: "Senior Full-Stack Developer",
     company: "TechCorp Inc.",
     period: "2022 - Present",
-    location: "San Francisco, CA",
+    location: "Balrampur, Uttar Pradesh (India)",
     description: "Leading development of scalable web applications using React, Node.js, and cloud technologies. Mentoring junior developers and implementing best practices.",
     technologies: ["React", "Node.js", "AWS", "MongoDB", "Docker"]
   },

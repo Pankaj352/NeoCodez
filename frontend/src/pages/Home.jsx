@@ -86,13 +86,13 @@ export default function Home() {
             {/* Contact Info */}
             <div className="contact-info">
               <motion.a
-                href="mailto:hello@example.com"
+                href="mailto:contact@neocodez.com"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="contact-link"
               >
                 <Mail className="icon" />
-                <span>hello@example.com</span>
+                <span>contact@neocodez.com</span>
               </motion.a>
               
               <motion.a
@@ -101,7 +101,7 @@ export default function Home() {
                 whileTap={{ scale: 0.95 }}
                 className="contact-link"
               >
-                <span>+1 (234) 567-890</span>
+                <span>+91 7081051605</span>
               </motion.a>
             </div>
           </motion.div>

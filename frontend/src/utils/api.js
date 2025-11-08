@@ -2,7 +2,7 @@ import axios from "axios";
 import { mockProjects, mockBlogPosts, mockContacts } from "./mockData";
 import store from "../store"; // import your redux store
 
-export const API_URL ="http://localhost:5000/api";
+export const API_URL ="https://neocodez-backend.onrender.com/api";
 
 // Create axios instance
 const api = axios.create({

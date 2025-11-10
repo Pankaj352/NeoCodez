@@ -7,18 +7,34 @@ const createBlog = async (req, res) => {
   try {
     const { title, content, excerpt, tags, status, featuredImage } = req.body;
 
+    if (!title || !content || !excerpt) {
+      return res.status(400).json({ message: 'title, content and excerpt are required' });
+    }
+
+    const tagsArray = Array.isArray(tags)
+      ? tags
+      : (typeof tags === 'string'
+          ? tags.split(',').map(t => t.trim()).filter(Boolean)
+          : []);
+
     const blog = await Blog.create({
       title,
       content,
       excerpt,
       author: req.user._id,
-      tags,
-      status,
+      tags: tagsArray,
+      status: status === 'published' ? 'published' : 'draft',
       featuredImage,
     });
 
     res.status(201).json(blog);
   } catch (error) {
+    if (error?.code === 11000 && error?.keyPattern?.slug) {
+      return res.status(409).json({ message: 'A blog with this title/slug already exists' });
+    }
+    if (error?.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -88,16 +104,28 @@ const updateBlog = async (req, res) => {
       return res.status(404).json({ message: 'Blog not found' });
     }
 
-    blog.title = title || blog.title;
-    blog.content = content || blog.content;
-    blog.excerpt = excerpt || blog.excerpt;
-    blog.tags = tags || blog.tags;
-    blog.status = status || blog.status;
-    blog.featuredImage = featuredImage || blog.featuredImage;
+    const tagsArray = Array.isArray(tags)
+      ? tags
+      : (typeof tags === 'string'
+          ? tags.split(',').map(t => t.trim()).filter(Boolean)
+          : blog.tags);
+
+    blog.title = title ?? blog.title;
+    blog.content = content ?? blog.content;
+    blog.excerpt = excerpt ?? blog.excerpt;
+    blog.tags = tagsArray ?? blog.tags;
+    blog.status = (status === 'published' || status === 'draft') ? status : blog.status;
+    blog.featuredImage = featuredImage ?? blog.featuredImage;
 
     const updatedBlog = await blog.save();
     res.json(updatedBlog);
   } catch (error) {
+    if (error?.code === 11000 && error?.keyPattern?.slug) {
+      return res.status(409).json({ message: 'A blog with this title/slug already exists' });
+    }
+    if (error?.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 };

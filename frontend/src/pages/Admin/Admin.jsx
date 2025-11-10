@@ -478,7 +478,8 @@ function ProjectsTab({ projects, onDelete, onEdit, onAdd }) {
 function BlogTab({ blogPosts, onDelete, onEdit, onAdd }) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredPosts = blogPosts.filter(post => 
+  const postsArr = Array.isArray(blogPosts) ? blogPosts : Array.isArray(blogPosts?.data) ? blogPosts.data : [];
+  const filteredPosts = postsArr.filter(post => 
     post.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -608,6 +609,11 @@ function ContactsTab({ contacts, onDelete }) {
 
 // Analytics Tab Component
 function AnalyticsTab({ projects = [], blogPosts = [], contacts = [] }) {
+  // Normalize inputs to arrays in case props are axios responses or null
+  const projectsArr = Array.isArray(projects) ? projects : Array.isArray(projects?.data) ? projects.data : [];
+  const blogArr = Array.isArray(blogPosts) ? blogPosts : Array.isArray(blogPosts?.data) ? blogPosts.data : [];
+  const contactArr = Array.isArray(contacts) ? contacts : Array.isArray(contacts?.data) ? contacts.data : [];
+
   const monthLabels = useMemo(() => {
     const now = new Date();
     const labels = [];
@@ -631,28 +637,28 @@ function AnalyticsTab({ projects = [], blogPosts = [], contacts = [] }) {
 
   const projectsByStatus = useMemo(() => {
     const map = { 'Completed': 0, 'In Progress': 0, 'Planning': 0 };
-    projects.forEach(p => {
+    projectsArr.forEach(p => {
       const s = p.status || 'Planning';
       map[s] = (map[s] || 0) + 1;
     });
     return map;
-  }, [projects]);
+  }, [projectsArr]);
 
   const blogByCategory = useMemo(() => {
     const map = {};
-    blogPosts.forEach(b => {
+    blogArr.forEach(b => {
       const c = b.category || 'General';
       map[c] = (map[c] || 0) + 1;
     });
     return map;
-  }, [blogPosts]);
+  }, [blogArr]);
 
   const lineData = {
     labels: monthLabels,
     datasets: [
       {
         label: 'Projects',
-        data: countByMonth(projects),
+        data: countByMonth(projectsArr),
         borderColor: '#7c3aed',
         backgroundColor: 'rgba(124, 58, 237, 0.2)',
         tension: 0.4,
@@ -660,7 +666,7 @@ function AnalyticsTab({ projects = [], blogPosts = [], contacts = [] }) {
       },
       {
         label: 'Blog Posts',
-        data: countByMonth(blogPosts),
+        data: countByMonth(blogArr),
         borderColor: '#10b981',
         backgroundColor: 'rgba(16, 185, 129, 0.2)',
         tension: 0.4,
@@ -668,7 +674,7 @@ function AnalyticsTab({ projects = [], blogPosts = [], contacts = [] }) {
       },
       {
         label: 'Messages',
-        data: countByMonth(contacts),
+        data: countByMonth(contactArr),
         borderColor: '#f59e0b',
         backgroundColor: 'rgba(245, 158, 11, 0.2)',
         tension: 0.4,
@@ -883,8 +889,9 @@ function AdminModal({ type, item, onClose, onSave }) {
     title: item?.title || '',
     description: item?.description || '',
     category: item?.category || '',
-    status: item?.status || 'Planning',
+    status: item?.status || (type === 'blog' ? 'draft' : 'Planning'),
     technologies: item?.technologies?.join(', ') || '',
+    excerpt: item?.excerpt || '',
     liveUrl: item?.liveUrl || '',
     githubUrl: item?.githubUrl || '',
     image: item?.image || ''
@@ -900,10 +907,27 @@ function AdminModal({ type, item, onClose, onSave }) {
           await projectsAPI.create(formData);
         }
       } else if (type === 'blog') {
+        // Map UI fields to backend Blog model
+        const parsedTags = (formData.technologies || '')
+          .split(',')
+          .map(t => t.trim().replace(/^'+|'+$/g, ''))
+          .filter(Boolean);
+        if (formData.category) parsedTags.unshift(formData.category);
+        const mappedStatus = ['draft','published'].includes(formData.status)
+          ? formData.status
+          : (formData.status === 'Completed' ? 'published' : 'draft');
+        const payload = {
+          title: formData.title,
+          content: formData.description, // required by backend
+          excerpt: (formData.excerpt && formData.excerpt.trim()) ? formData.excerpt : (formData.description || '').slice(0, 200),
+          tags: parsedTags,
+          status: mappedStatus,
+          featuredImage: formData.image || undefined,
+        };
         if (item) {
-          await blogAPI.update(item._id, formData);
+          await blogAPI.update(item._id, payload);
         } else {
-          await blogAPI.create(formData);
+          await blogAPI.create(payload);
         }
       }
       onSave();
@@ -965,25 +989,36 @@ function AdminModal({ type, item, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="text-text-secondary">Description</label>
+            <label className="text-text-secondary">{type === 'blog' ? 'Content' : 'Description'}</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
               className="card-glass"
-              placeholder="Project description"
+              placeholder={type === 'blog' ? 'Write blog content...' : 'Project description'}
               required
             />
           </div>
+          {type === 'blog' && (
+            <div>
+              <label className="text-text-secondary">Excerpt (optional)</label>
+              <textarea
+                value={formData.excerpt || ''}
+                onChange={(e) => setFormData({...formData, excerpt: e.target.value})}
+                className="card-glass"
+                placeholder="Short summary shown in lists"
+              />
+            </div>
+          )}
 
           <div className="form-grid">
             <div>
-              <label className="text-text-secondary">Technologies</label>
+              <label className="text-text-secondary">{type === 'blog' ? 'Tags' : 'Technologies'}</label>
               <input
                 type="text"
                 value={formData.technologies}
                 onChange={(e) => setFormData({...formData, technologies: e.target.value})}
                 className="card-glass"
-                placeholder="React, Node.js, MongoDB"
+                placeholder={type === 'blog' ? 'react, node, mongodb' : 'React, Node.js, MongoDB'}
               />
             </div>
             <div>
@@ -993,44 +1028,55 @@ function AdminModal({ type, item, onClose, onSave }) {
                 onChange={(e) => setFormData({...formData, status: e.target.value})}
                 className="card-glass"
               >
-                <option value="Planning">Planning</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
+                {type === 'blog' ? (
+                  <>
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="Planning">Planning</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                  </>
+                )}
               </select>
             </div>
           </div>
 
-          <div className="form-grid">
-            <div>
-              <label className="text-text-secondary">Live URL</label>
-              <input
-                type="url"
-                value={formData.liveUrl}
-                onChange={(e) => setFormData({...formData, liveUrl: e.target.value})}
-                className="card-glass"
-                placeholder="https://example.com"
-              />
+          {type !== 'blog' && (
+            <div className="form-grid">
+              <div>
+                <label className="text-text-secondary">Live URL</label>
+                <input
+                  type="url"
+                  value={formData.liveUrl}
+                  onChange={(e) => setFormData({...formData, liveUrl: e.target.value})}
+                  className="card-glass"
+                  placeholder="https://example.com"
+                />
+              </div>
+              <div>
+                <label className="text-text-secondary">GitHub URL</label>
+                <input
+                  type="url"
+                  value={formData.githubUrl}
+                  onChange={(e) => setFormData({...formData, githubUrl: e.target.value})}
+                  className="card-glass"
+                  placeholder="https://github.com/username/repo"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-text-secondary">GitHub URL</label>
-              <input
-                type="url"
-                value={formData.githubUrl}
-                onChange={(e) => setFormData({...formData, githubUrl: e.target.value})}
-                className="card-glass"
-                placeholder="https://github.com/username/repo"
-              />
-            </div>
-          </div>
+          )}
 
           <div>
-            <label className="text-text-secondary">Image URL</label>
+            <label className="text-text-secondary">{type === 'blog' ? 'Featured Image URL' : 'Image URL'}</label>
             <input
               type="url"
               value={formData.image}
               onChange={(e) => setFormData({...formData, image: e.target.value})}
               className="card-glass"
-              placeholder="https://example.com/image.jpg"
+              placeholder={type === 'blog' ? 'https://example.com/featured.jpg' : 'https://example.com/image.jpg'}
             />
           </div>
 

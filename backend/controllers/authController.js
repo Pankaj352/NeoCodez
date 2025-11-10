@@ -31,7 +31,7 @@ const registerUser = async (req, res) => {
     // Check if user exists
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ error: 'User already exists' });
     }
 
     // Create user
@@ -44,7 +44,7 @@ const registerUser = async (req, res) => {
     // Verify user creation
     if (!user || !user._id) {
       console.error('User creation failed: No user returned from User.create');
-      return res.status(400).json({ message: 'Failed to create user' });
+      return res.status(400).json({ error: 'Failed to create user' });
     }
 
     // Generate token
@@ -91,7 +91,7 @@ const loginUser = async (req, res) => {
         token: generateToken(user._id, user.role),
       });
     } else {
-      res.status(401).json({ message: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid email or password' });
     }
   } catch (error) {
     console.error('Login error:', error.stack);
@@ -116,7 +116,7 @@ const getUserProfile = async (req, res) => {
         role: user.role,
       });
     } else {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
     }
   } catch (error) {
     console.error('Get profile error:', error.stack);
@@ -285,7 +285,7 @@ const verifyOtp = async (req, res) => {
     }
 
     if (user.otp !== otp || user.otpExpires < Date.now()) {
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
+      return res.status(400).json({ error: 'Invalid or expired OTP' });
     }
 
     // Clear OTP after verification
@@ -318,7 +318,7 @@ const resetPassword = async (req, res) => {
     try {
       decoded = jwt.verify(resetToken, process.env.RESET_TOKEN_SECRET);
     } catch (error) {
-      return res.status(401).json({ message: 'Invalid or expired reset token' });
+      return res.status(401).json({ error: 'Invalid or expired reset token' });
     }
 
     const user = await User.findById(decoded.id);

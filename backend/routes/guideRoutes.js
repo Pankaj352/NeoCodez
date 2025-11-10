@@ -12,8 +12,8 @@ const { protect, admin } = require('../middlewares/authMiddleware');
 
 // Public routes
 router.get('/', getGuides);
-router.get('/:slug', getGuideBySlug);
 router.get('/project/:projectId', getGuidesByProject);
+router.get('/:slug', getGuideBySlug);
 
 // Protected routes (admin only)
 router.post('/', protect, admin, createGuide);

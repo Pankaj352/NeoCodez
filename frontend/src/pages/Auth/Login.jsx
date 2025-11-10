@@ -14,56 +14,61 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Remove the invalid line: const newUser = useSelector()
-  // ❌ This caused syntax/runtime error because useSelector() needs an argument
-  // ✅ Use below selector to get auth state
   const { isAuthenticated, user, loading, statusMessage, statusType } = useSelector(
     (state) => state.auth
   );
 
-  // ✅ Clear old messages when component mounts/unmounts
+  // ✅ Clear status messages on mount/unmount
   useEffect(() => {
     dispatch(clearStatus());
     return () => dispatch(clearStatus());
   }, [dispatch]);
 
-  // ✅ Redirect user after successful login based on role
+  
+  // ✅ Handle form submit
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    console.log('🟡 Submitting login form:', formData);
+
+    dispatch(clearStatus());
+    try {
+      const response = await dispatch(login(formData)).unwrap();
+      console.log('🟢 Login successful:', response);
+    } catch (err) {
+      console.error('🔴 Login failed:', err);
+    }
+  };
+
+  // ✅ Redirect user after successful login based on role (lowercase roles)
   useEffect(() => {
     if (isAuthenticated && user) {
-      const destination = user.role === 'admin' ? '/admin/dashboard' : '/';
+      let destination = '/'; // default: user homepage
+
+      if (user.role === 'admin') {
+        destination = '/admin/dashboard';
+      } else if (user.role === 'user') {
+        destination = '/';
+      }
+
       const timer = setTimeout(() => {
         navigate(destination, { replace: true });
-      }, 800);
+      }, 800); // delay for smooth UX (optional)
+
       return () => clearTimeout(timer);
     }
   }, [isAuthenticated, user, navigate]);
+
+  // 🔍 Debug logs (optional — remove in production)
   useEffect(() => {
-  console.log("Auth state changed:", { isAuthenticated, user, loading, statusMessage, statusType });
-}, [isAuthenticated, user, loading, statusMessage, statusType]);
+    console.log('Auth state changed:', { isAuthenticated, user, loading, statusMessage, statusType });
+  }, [isAuthenticated, user, loading, statusMessage, statusType]);
 
-useEffect(() => {
-  console.log("Location:", location);
-}, [location]);
+  useEffect(() => {
+    console.log('Location:', location);
+  }, [location]);
 
 
-  // ✅ Handle form submit
-  const handleSubmit = async (e) => {
-  e.preventDefault();
-  console.log("🟡 Submitting login form:", formData);
-
-  dispatch(clearStatus());
-  try {
-    const response = await dispatch(login({ 
-      email: formData.email, 
-      password: formData.password 
-    })).unwrap();
-
-    console.log("🟢 Login successful:", response);
-  } catch (err) {
-    console.error("🔴 Login failed:", err);
-  }
-};
-
+  // ✅ Animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 50 },
     visible: {
@@ -119,7 +124,7 @@ useEffect(() => {
         )}
 
         <form onSubmit={handleSubmit} className="login-form">
-          {/* Email */}
+          {/* Email Field */}
           <motion.div variants={itemVariants} className="form-group">
             <label htmlFor="email">Email Address</label>
             <div className="input-wrapper">
@@ -136,7 +141,7 @@ useEffect(() => {
             </div>
           </motion.div>
 
-          {/* Password */}
+          {/* Password Field */}
           <motion.div variants={itemVariants} className="form-group">
             <label htmlFor="password">Password</label>
             <div className="input-wrapper">

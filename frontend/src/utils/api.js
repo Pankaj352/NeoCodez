@@ -2,7 +2,8 @@ import axios from "axios";
 import { mockProjects, mockBlogPosts, mockContacts } from "./mockData";
 import store from "../store"; // import your redux store
 
-export const API_URL ="https://neocodez-backend.onrender.com/api";
+const DEFAULT_BASE = 'http://localhost:5000/api';
+export const API_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE;
 
 // Create axios instance
 const api = axios.create({
@@ -15,7 +16,7 @@ const api = axios.create({
 // Request interceptor → get token from Redux store
 api.interceptors.request.use(
   (config) => {
-    const token = store.getState().auth.token; // ✅ get token from redux
+    const token = localStorage.getItem('token'); // ✅ get token from localStorage
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -74,7 +75,7 @@ export const projectsAPI = {
   update: (id, projectData) => api.put(`/projects/${id}`, projectData),
   delete: (id) => api.delete(`/projects/${id}`),
   uploadImage: (formData) =>
-    api.post("/upload/image", formData, {
+    api.post("/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
 };

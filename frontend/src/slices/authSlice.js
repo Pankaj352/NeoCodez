@@ -18,6 +18,22 @@ export const login = createAsyncThunk(
   }
 );
 
+export const checkAuth = createAsyncThunk(
+  'auth/checkAuth',
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (token && user) {
+        return { token, user };
+      }
+      return rejectWithValue('No token found');
+    } catch (error) {
+      return rejectWithValue('Failed to parse user data');
+    }
+  }
+);
+
 export const register = createAsyncThunk(
   'auth/register',
   async (userData, { rejectWithValue }) => {
@@ -104,6 +120,17 @@ const authSlice = createSlice({
         state.error = action.payload;
         state.statusMessage = action.payload;
         state.statusType = 'error';
+      })
+
+      .addCase(checkAuth.fulfilled, (state, action) => {
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+      })
+      .addCase(checkAuth.rejected, (state) => {
+        state.isAuthenticated = false;
+        state.user = null;
+        state.token = null;
       })
 
       // REGISTER

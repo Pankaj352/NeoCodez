@@ -17,7 +17,6 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",   // Vite frontend (dev)
   "https://neocodez.com",   // Vite frontend (dev)
-  "https://neocodez-backend.onrender.com",   // Vite frontend (dev)
   
 ];
 

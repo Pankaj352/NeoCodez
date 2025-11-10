@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Outlet, NavLink, useOutlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -15,6 +15,7 @@ import ThreeDBackground from '../../components/ThreeDBackground';
 
 export default function AdminLayout({ projects, blogPosts, contacts, handleDelete, openModal }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const outlet = useOutlet();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);

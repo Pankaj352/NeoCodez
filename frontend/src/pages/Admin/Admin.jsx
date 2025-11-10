@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -21,6 +21,9 @@ import {
   LogOut,
   User
 } from 'lucide-react';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend);
 import { projectsAPI, blogAPI, contactAPI } from '../../utils/api';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
@@ -149,7 +152,7 @@ export default function Admin() {
         className="admin-nav"
       >
         <div className="container-lg">
-          <div className="nav-tabs">
+          <div className="nav-tabs gap-3">
             {[
               { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
               { key: 'projects', label: 'Projects', icon: FolderOpen },
@@ -164,7 +167,7 @@ export default function Admin() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveTab(tab.key)}
-                className={`nav-tab ${activeTab === tab.key ? 'active' : ''}`}
+                className={`nav-tab cursor-pointer text-white  ${activeTab === tab.key ? 'active' : ''}`}
               >
                 <tab.icon className="h-5 w-5" />
                 <span>{tab.label}</span>
@@ -180,7 +183,15 @@ export default function Admin() {
         className="admin-content"
       >
         <div className="container-lg">
-          {activeTab === 'dashboard' && <DashboardTab />}
+          {activeTab === 'dashboard' && (
+            <DashboardTab 
+              loading={loading}
+              error={error}
+              projects={projects}
+              blogPosts={blogPosts}
+              contacts={contacts}
+            />
+          )}
           {activeTab === 'projects' && (
             <ProjectsTab 
               projects={projects} 
@@ -203,7 +214,9 @@ export default function Admin() {
               onDelete={handleDelete}
             />
           )}
-          {activeTab === 'analytics' && <AnalyticsTab />}
+          {activeTab === 'analytics' && (
+            <AnalyticsTab projects={projects} blogPosts={blogPosts} contacts={contacts} />
+          )}
           {activeTab === 'settings' && <SettingsTab />}
         </div>
       </motion.div>
@@ -230,13 +243,38 @@ export default function Admin() {
 }
 
 // Dashboard Tab Component
-function DashboardTab() {
+function DashboardTab({ loading, error, projects = [], blogPosts = [], contacts = [] }) {
   const stats = [
-    { title: 'Total Projects', value: '12', icon: FolderOpen, color: 'text-primary' },
-    { title: 'Blog Posts', value: '8', icon: FileText, color: 'text-success' },
-    { title: 'Messages', value: '24', icon: MessageSquare, color: 'text-accent' },
-    { title: 'Views This Month', value: '1.2K', icon: TrendingUp, color: 'text-warning' }
+    { title: 'Total Projects', value: String(projects.length), icon: FolderOpen, color: 'text-primary' },
+    { title: 'Blog Posts', value: String(blogPosts.length), icon: FileText, color: 'text-success' },
+    { title: 'Messages', value: String(contacts.length), icon: MessageSquare, color: 'text-accent' },
+    { title: 'Views This Month', value: '—', icon: TrendingUp, color: 'text-warning' }
   ];
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="dashboard-stats">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="stat-card card-glass animate-pulse h-24" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="card-glass p-4 text-error">{String(error)}</div>
+    );
+  }
+
+  const recentProjects = [...projects]
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+    .slice(0, 5);
+  const recentContacts = [...contacts]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
 
   return (
     <div className="space-y-8">
@@ -272,22 +310,25 @@ function DashboardTab() {
         >
           <h3 className="text-xl font-bold text-text mb-4">Recent Projects</h3>
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="recent-item card-glass">
+            {recentProjects.map((p) => (
+              <div key={p._id} className="recent-item card-glass">
                 <div className="flex items-center space-x-4">
                   <div className="icon-wrapper bg-primary">
                     <FolderOpen className="h-5 w-5 text-button-text" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-text font-medium">Project {i}</p>
-                    <p className="text-text-secondary text-sm">Updated 2 hours ago</p>
+                    <p className="text-text font-medium">{p.title}</p>
+                    <p className="text-text-secondary text-sm">{new Date(p.updatedAt || p.createdAt).toLocaleString()}</p>
                   </div>
-                  <span className="status-badge bg-success text-button-text">
-                    Active
+                  <span className={`status-badge ${p.status === 'Completed' ? 'bg-success' : p.status === 'In Progress' ? 'bg-warning' : 'bg-primary'} text-button-text`}>
+                    {p.status || 'Active'}
                   </span>
                 </div>
               </div>
             ))}
+            {recentProjects.length === 0 && (
+              <div className="text-text-secondary">No projects yet.</div>
+            )}
           </div>
         </motion.div>
 
@@ -298,22 +339,23 @@ function DashboardTab() {
         >
           <h3 className="text-xl font-bold text-text mb-4">Recent Messages</h3>
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="recent-item card-glass">
+            {recentContacts.map((c) => (
+              <div key={c._id} className="recent-item card-glass">
                 <div className="flex items-center space-x-4">
                   <div className="icon-wrapper bg-accent">
                     <MessageSquare className="h-5 w-5 text-button-text" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-text font-medium">Contact {i}</p>
-                    <p className="text-text-secondary text-sm">New message received</p>
+                    <p className="text-text font-medium">{c.name}</p>
+                    <p className="text-text-secondary text-sm">{c.subject}</p>
                   </div>
-                  <span className="status-badge bg-primary text-button-text">
-                    New
-                  </span>
+                  <span className="status-badge bg-primary text-button-text">New</span>
                 </div>
               </div>
             ))}
+            {recentContacts.length === 0 && (
+              <div className="text-text-secondary">No messages yet.</div>
+            )}
           </div>
         </motion.div>
       </div>
@@ -565,7 +607,111 @@ function ContactsTab({ contacts, onDelete }) {
 }
 
 // Analytics Tab Component
-function AnalyticsTab() {
+function AnalyticsTab({ projects = [], blogPosts = [], contacts = [] }) {
+  const monthLabels = useMemo(() => {
+    const now = new Date();
+    const labels = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      labels.push(d.toLocaleString(undefined, { month: 'short' }));
+    }
+    return labels;
+  }, []);
+
+  const countByMonth = (items) => {
+    const now = new Date();
+    const counts = Array(6).fill(0);
+    items.forEach((it) => {
+      const date = new Date(it.createdAt || Date.now());
+      const diffMonths = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth());
+      if (diffMonths >= 0 && diffMonths < 6) counts[5 - diffMonths]++;
+    });
+    return counts;
+  };
+
+  const projectsByStatus = useMemo(() => {
+    const map = { 'Completed': 0, 'In Progress': 0, 'Planning': 0 };
+    projects.forEach(p => {
+      const s = p.status || 'Planning';
+      map[s] = (map[s] || 0) + 1;
+    });
+    return map;
+  }, [projects]);
+
+  const blogByCategory = useMemo(() => {
+    const map = {};
+    blogPosts.forEach(b => {
+      const c = b.category || 'General';
+      map[c] = (map[c] || 0) + 1;
+    });
+    return map;
+  }, [blogPosts]);
+
+  const lineData = {
+    labels: monthLabels,
+    datasets: [
+      {
+        label: 'Projects',
+        data: countByMonth(projects),
+        borderColor: '#7c3aed',
+        backgroundColor: 'rgba(124, 58, 237, 0.2)',
+        tension: 0.4,
+        fill: true,
+      },
+      {
+        label: 'Blog Posts',
+        data: countByMonth(blogPosts),
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        tension: 0.4,
+        fill: true,
+      },
+      {
+        label: 'Messages',
+        data: countByMonth(contacts),
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        tension: 0.4,
+        fill: true,
+      },
+    ],
+  };
+
+  const barData = {
+    labels: Object.keys(projectsByStatus),
+    datasets: [
+      {
+        label: 'Projects by Status',
+        data: Object.values(projectsByStatus),
+        backgroundColor: ['#10b981', '#f59e0b', '#6366f1'],
+      },
+    ],
+  };
+
+  const doughnutData = {
+    labels: Object.keys(blogByCategory),
+    datasets: [
+      {
+        label: 'Posts',
+        data: Object.values(blogByCategory),
+        backgroundColor: ['#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#a855f7'],
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  const commonOptions = {
+    plugins: {
+      legend: { labels: { color: '#cbd5e1' } },
+      tooltip: { mode: 'index', intersect: false },
+    },
+    scales: {
+      x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
+      y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
+    },
+    maintainAspectRatio: false,
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -578,25 +724,11 @@ function AnalyticsTab() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="analytics-card card-glass"
+          style={{ minHeight: 320 }}
         >
-          <h3 className="font-bold">Page Views</h3>
-          <div className="space-y-4">
-            <div className="metric">
-              <span className="text-text-secondary">Home Page</span>
-              <span className="text-text font-semibold">1,234</span>
-            </div>
-            <div className="metric">
-              <span className="text-text-secondary">Projects</span>
-              <span className="text-text font-semibold">856</span>
-            </div>
-            <div className="metric">
-              <span className="text-text-secondary">Blog</span>
-              <span className="text-text font-semibold">432</span>
-            </div>
-            <div className="metric">
-              <span className="text-text-secondary">Contact</span>
-              <span className="text-text font-semibold">298</span>
-            </div>
+          <h3 className="font-bold">Activity (last 6 months)</h3>
+          <div style={{ height: 260 }}>
+            <Line data={lineData} options={commonOptions} />
           </div>
         </motion.div>
 
@@ -604,24 +736,23 @@ function AnalyticsTab() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           className="analytics-card card-glass"
+          style={{ minHeight: 320 }}
         >
-          <h3 className="font-bold">Recent Activity</h3>
-          <div className="space-y-4">
-            <div className="activity-item">
-              <div className="activity-dot bg-success"></div>
-              <span className="text-text-secondary">New project added</span>
-              <span className="text-text-secondary text-sm ml-auto">2h ago</span>
-            </div>
-            <div className="activity-item">
-              <div className="activity-dot bg-primary"></div>
-              <span className="text-text-secondary">Blog post published</span>
-              <span className="text-text-secondary text-sm ml-auto">5h ago</span>
-            </div>
-            <div className="activity-item">
-              <div className="activity-dot bg-accent"></div>
-              <span className="text-text-secondary">Contact message received</span>
-              <span className="text-text-secondary text-sm ml-auto">1d ago</span>
-            </div>
+          <h3 className="font-bold">Projects by Status</h3>
+          <div style={{ height: 260 }}>
+            <Bar data={barData} options={commonOptions} />
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="analytics-card card-glass"
+          style={{ minHeight: 320 }}
+        >
+          <h3 className="font-bold">Blog Categories</h3>
+          <div style={{ height: 260 }}>
+            <Doughnut data={doughnutData} options={{ plugins: { legend: { labels: { color: '#cbd5e1' } } }, maintainAspectRatio: false }} />
           </div>
         </motion.div>
       </div>

@@ -6,6 +6,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { FaSun, FaMoon, FaCube } from 'react-icons/fa';
 import '../styles/Navbar.css';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../slices/authSlice'; 
 
 const navItems = [
   { name: 'Home', path: '/' },
@@ -16,6 +18,8 @@ const navItems = [
 ];
 
 export default function Navbar() {
+  const loginUser = useSelector((state) => state.auth.user);
+  console.log("Logged in user from Redux:", loginUser);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -79,11 +83,11 @@ export default function Navbar() {
           </motion.button>
 
           <div className="auth-section">
-            {isAuthenticated ? (
+            {(isAuthenticated && loginUser) ? (
               <div className="user-menu" ref={dropdownRef}>
                 <button onClick={() => setDropdownOpen(!isDropdownOpen)} className="user-menu-button">
                   <div className="user-avatar">{user?.name?.[0].toUpperCase() || 'A'}</div>
-                                    <span className="user-name">{user?.name || 'Admin'}</span>
+                    <span className="user-name">{user?.name}</span>
                 </button>
                 <AnimatePresence>
                   {isDropdownOpen && (
@@ -93,10 +97,12 @@ export default function Navbar() {
                       exit={{ opacity: 0, y: -10 }}
                       className="user-dropdown"
                     >
-                      <Link to="/admin" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                        <Settings size={16} />
-                        <span>Dashboard</span>
-                      </Link>
+                      {loginUser?.role === 'admin' && (
+                        <Link to="/admin" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                          <Settings size={16} />
+                          <span>Dashboard</span>
+                        </Link>
+                      )}
                       <button onClick={handleLogout} className="dropdown-item">
                         <LogOut size={16} />
                         <span>Logout</span>
@@ -106,10 +112,12 @@ export default function Navbar() {
                 </AnimatePresence>
               </div>
             ) : (
-              <Link to="/login" className="btn btn-primary">
-                <LogIn size={16} />
-                <span>Login</span>
-              </Link>
+              !isAuthenticated &&  (
+                <Link to="/login" className="btn btn-primary">
+                  <LogIn size={16} />
+                  <span>Login</span>
+                </Link>
+              )
             )}
           </div>
 

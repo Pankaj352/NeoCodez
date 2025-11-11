@@ -48,15 +48,17 @@ const blogSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Create slug from title before saving
-blogSchema.pre('save', function(next) {
+// Create slug from title before validation so required passes
+blogSchema.pre('validate', function(next) {
   if (!this.isModified('title')) {
     return next();
   }
-  this.slug = this.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+  if (typeof this.title === 'string') {
+    this.slug = this.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  }
   next();
 });
 

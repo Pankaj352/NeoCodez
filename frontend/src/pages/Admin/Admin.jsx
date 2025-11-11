@@ -908,6 +908,16 @@ function AdminModal({ type, item, onClose, onSave }) {
         }
       } else if (type === 'blog') {
         // Map UI fields to backend Blog model
+        const title = (formData.title || '').trim();
+        const content = (formData.description || '').trim();
+        const explicitExcerpt = (formData.excerpt || '').trim();
+        const autoExcerpt = content.slice(0, 200).trim();
+        const excerpt = explicitExcerpt || autoExcerpt;
+
+        if (!title || !content || !excerpt) {
+          throw new Error('Please provide Title, Content and Excerpt (first 200 chars will be used by default).');
+        }
+
         const parsedTags = (formData.technologies || '')
           .split(',')
           .map(t => t.trim().replace(/^'+|'+$/g, ''))
@@ -917,12 +927,12 @@ function AdminModal({ type, item, onClose, onSave }) {
           ? formData.status
           : (formData.status === 'Completed' ? 'published' : 'draft');
         const payload = {
-          title: formData.title,
-          content: formData.description, // required by backend
-          excerpt: (formData.excerpt && formData.excerpt.trim()) ? formData.excerpt : (formData.description || '').slice(0, 200),
+          title,
+          content,
+          excerpt,
           tags: parsedTags,
           status: mappedStatus,
-          featuredImage: formData.image || undefined,
+          featuredImage: formData.image?.trim() || undefined,
         };
         if (item) {
           await blogAPI.update(item._id, payload);
@@ -933,7 +943,9 @@ function AdminModal({ type, item, onClose, onSave }) {
       onSave();
       onClose();
     } catch (error) {
-      console.error('Failed to save:', error);
+      const msg = error?.response?.data?.message || error?.message || String(error);
+      console.error('Failed to save:', msg, error?.response?.data);
+      alert(msg);
     }
   };
 

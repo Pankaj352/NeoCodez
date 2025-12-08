@@ -19,7 +19,9 @@ import {
   Search,
   Filter,
   LogOut,
-  User
+  User,
+  Menu,
+  X
 } from 'lucide-react';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
@@ -27,6 +29,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 import { projectsAPI, blogAPI, contactAPI } from '../../utils/api';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
+import AdminHeader from './AdminHeader';
 import "../../styles/admin.css";
 
 const categories = ['All', 'Full-Stack', 'AI/ML', 'Dashboard', 'Mobile', 'Analytics', 'Blockchain'];
@@ -42,6 +45,7 @@ export default function Admin() {
   const [modalType, setModalType] = useState(''); // 'project', 'blog', 'contact'
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const { loading, error, execute } = useApi();
   const { user, logout } = useAuth();
@@ -54,14 +58,17 @@ export default function Admin() {
 
   const fetchData = async () => {
     try {
-      const [projectsRes, blogsRes, contactsRes] = await Promise.all([
+      const [projectsRes, publishedRes, draftRes, contactsRes] = await Promise.all([
         execute(projectsAPI.getAll),
-        execute(blogAPI.getAll),
+        execute(blogAPI.getAll, { status: 'published' }),
+        execute(blogAPI.getAll, { status: 'draft' }),
         execute(contactAPI.getAll || (() => Promise.resolve({ data: [] })))
       ]);
       
       setProjects(projectsRes.data);
-      setBlogPosts(blogsRes.data);
+      const published = Array.isArray(publishedRes?.data?.blogs) ? publishedRes.data.blogs : (Array.isArray(publishedRes?.data) ? publishedRes.data : []);
+      const drafts = Array.isArray(draftRes?.data?.blogs) ? draftRes.data.blogs : (Array.isArray(draftRes?.data) ? draftRes.data : []);
+      setBlogPosts([...published, ...drafts]);
       setContacts(contactsRes.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -111,8 +118,6 @@ export default function Admin() {
     setModalType('');
   };
 
-
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -137,89 +142,105 @@ export default function Admin() {
   };
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="admin-container"
-    >
-      {/* Header */}
-    
-
-      {/* Navigation Tabs */}
-      <motion.div
-        variants={itemVariants}
-        className="admin-nav"
+    <div className="admin-layout">
+      {/* Mobile Sidebar Toggle */}
+      <button 
+        className="mobile-sidebar-toggle"
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
       >
-        <div className="container-lg">
-          <div className="nav-tabs gap-3">
-            {[
-              { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-              { key: 'projects', label: 'Projects', icon: FolderOpen },
-              { key: 'blog', label: 'Blog Posts', icon: FileText },
-              { key: 'contacts', label: 'Contacts', icon: MessageSquare },
-              { key: 'analytics', label: 'Analytics', icon: BarChart3 },
-              { key: 'settings', label: 'Settings', icon: Settings }
-            ].map((tab) => (
-              <motion.button
-                key={tab.key}
-                variants={itemVariants}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setActiveTab(tab.key)}
-                className={`nav-tab cursor-pointer text-white  ${activeTab === tab.key ? 'active' : ''}`}
-              >
-                <tab.icon className="h-5 w-5" />
-                <span>{tab.label}</span>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      </motion.div>
+        {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </button>
 
-      {/* Content */}
-      <motion.div
-        variants={itemVariants}
-        className="admin-content"
-      >
-        <div className="container-lg">
-          {activeTab === 'dashboard' && (
-            <DashboardTab 
-              loading={loading}
-              error={error}
-              projects={projects}
-              blogPosts={blogPosts}
-              contacts={contacts}
-            />
-          )}
-          {activeTab === 'projects' && (
-            <ProjectsTab 
-              projects={projects} 
-              onDelete={handleDelete}
-              onEdit={(project) => openModal('project', project)}
-              onAdd={() => openModal('project')}
-            />
-          )}
-          {activeTab === 'blog' && (
-            <BlogTab 
-              blogPosts={blogPosts} 
-              onDelete={handleDelete}
-              onEdit={(post) => openModal('blog', post)}
-              onAdd={() => openModal('blog')}
-            />
-          )}
-          {activeTab === 'contacts' && (
-            <ContactsTab 
-              contacts={contacts} 
-              onDelete={handleDelete}
-            />
-          )}
-          {activeTab === 'analytics' && (
-            <AnalyticsTab projects={projects} blogPosts={blogPosts} contacts={contacts} />
-          )}
-          {activeTab === 'settings' && <SettingsTab />}
+      {/* Sidebar Overlay */}
+      <div 
+        className={`sidebar-overlay ${isSidebarOpen ? 'show' : ''}`}
+        onClick={() => setIsSidebarOpen(false)}
+      />
+
+      {/* Sidebar */}
+      <aside className={`sidebar ${isSidebarOpen ? 'mobile-open' : 'mobile-closed'}`}>
+        {/* Sidebar Brand */}
+        <div className="sidebar-brand">
+          <h2 className="text-xl font-bold text-white">
+            Neo<span className="text-gradient">Code</span>
+          </h2>
+          <p className="text-sm text-gray-400 mt-1">Admin Panel</p>
         </div>
-      </motion.div>
+        
+        <div className="sidebar-nav">
+          {[
+            { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            { key: 'projects', label: 'Projects', icon: FolderOpen },
+            { key: 'blog', label: 'Blog Posts', icon: FileText },
+            { key: 'contacts', label: 'Contacts', icon: MessageSquare },
+            { key: 'analytics', label: 'Analytics', icon: BarChart3 },
+            { key: 'settings', label: 'Settings', icon: Settings }
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setActiveTab(tab.key);
+                setIsSidebarOpen(false);
+              }}
+              className={`sidebar-link ${activeTab === tab.key ? 'active' : ''}`}
+            >
+              <tab.icon className="h-5 w-5" />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="admin-main">
+        
+        
+        {/* Content */}
+        <div className="admin-content-wrapper">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="admin-content"
+          >
+            {activeTab === 'dashboard' && (
+              <DashboardTab 
+                loading={loading}
+                error={error}
+                projects={projects}
+                blogPosts={blogPosts}
+                contacts={contacts}
+              />
+            )}
+            {activeTab === 'projects' && (
+              <ProjectsTab 
+                projects={projects} 
+                onDelete={handleDelete}
+                onEdit={(project) => openModal('project', project)}
+                onAdd={() => openModal('project')}
+              />
+            )}
+            {activeTab === 'blog' && (
+              <BlogTab 
+                blogPosts={blogPosts} 
+                onDelete={handleDelete}
+                onEdit={(post) => openModal('blog', post)}
+                onAdd={() => openModal('blog')}
+              />
+            )}
+            {activeTab === 'contacts' && (
+              <ContactsTab 
+                contacts={contacts} 
+                onDelete={handleDelete}
+              />
+            )}
+            {activeTab === 'analytics' && (
+              <AnalyticsTab projects={projects} blogPosts={blogPosts} contacts={contacts} />
+            )}
+            {activeTab === 'settings' && <SettingsTab />}
+          </motion.div>
+        </div>
+      </div>
 
       {/* Modal */}
       {isModalOpen && (
@@ -238,7 +259,7 @@ export default function Admin() {
         title="Confirm Deletion"
         message="Are you sure you want to delete this item? This action cannot be undone."
       />
-    </motion.div>
+    </div>
   );
 }
 
@@ -278,6 +299,7 @@ function DashboardTab({ loading, error, projects = [], blogPosts = [], contacts 
 
   return (
     <div className="space-y-8">
+    
       {/* Stats Grid */}
       <div className="dashboard-stats">
         {stats.map((stat, index) => (
@@ -478,7 +500,15 @@ function ProjectsTab({ projects, onDelete, onEdit, onAdd }) {
 function BlogTab({ blogPosts, onDelete, onEdit, onAdd }) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const postsArr = Array.isArray(blogPosts) ? blogPosts : Array.isArray(blogPosts?.data) ? blogPosts.data : [];
+  const postsArr = Array.isArray(blogPosts)
+    ? blogPosts
+    : Array.isArray(blogPosts?.blogs)
+      ? blogPosts.blogs
+      : Array.isArray(blogPosts?.data?.blogs)
+        ? blogPosts.data.blogs
+        : Array.isArray(blogPosts?.data)
+          ? blogPosts.data
+          : [];
   const filteredPosts = postsArr.filter(post => 
     post.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -489,7 +519,7 @@ function BlogTab({ blogPosts, onDelete, onEdit, onAdd }) {
       <div className="blog-header">
         <div>
           <h2 className="font-bold">Blog Posts</h2>
-          <p className="text-text-secondary">{filteredPosts.length} posts found</p>
+          <p className="text-text-secondary">{String(filteredPosts.length)} posts found</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.05 }}

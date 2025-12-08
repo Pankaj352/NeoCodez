@@ -30,26 +30,16 @@ export default function AdminHeader({ toggleSidebar }) {
     
       <motion.div
         variants={itemVariants}
-        className="admin-header"
+        className="admin-header "
       >
         <div className="container-lg">
           <div className="admin-user-info">
-            <div>
-              <h3 className="font-bold">
-                Admin <span className="text-gradient">Dashboard</span>
-              </h3>
-            
-            </div>
-            
             {/* User Info & Logout */}
-            <div className="admin-user-info">
-              <div
-                className=" user-details "
-              >
+            <div className="user-actions ml-auto">
+              <div className="user-details">
                 <User className="h-5 w-5 text-primary" />
                 <div className="text-right">
                   <p className="text-text font-semibold">{user?.name || 'Admin'}</p>
-                  
                 </div>
               </div>
               
